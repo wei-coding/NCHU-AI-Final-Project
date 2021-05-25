@@ -7,11 +7,12 @@ import pygame
 from pygame.locals import QUIT, KEYDOWN, K_UP, K_DOWN, K_RIGHT, K_LEFT
 
 from agent import AI
+from helper import Action
 
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
-WINDOW_SIZE = (800, 600)
+WINDOW_SIZE = (800, 800)
 SNAKE_SIZE = 20
 
 
@@ -24,80 +25,54 @@ class Snake(pygame.sprite.Sprite):
 
 class Game:
     def __init__(self, ai=None):
+        self.snake = Snake()
+        pygame.init()
+        random.seed(time.time())
+        self.window_surface = pygame.display.set_mode(WINDOW_SIZE)
+        pygame.display.set_caption('Snake game by AI team')
+        self.clock = pygame.time.Clock()
+
         self.ai = None
         if ai:
             self.ai = ai
-        self.difficulty = 5
-        random.seed(time.time())
-        self.food = rand_pos()
-        pygame.init()
-        self.window_surface = pygame.display.set_mode(WINDOW_SIZE)
-        pygame.display.set_caption('Snake game by AI team')
+        self.food = self.rand_pos()
         self.game_over = False
-        self.clock = pygame.time.Clock()
-        self.snake = Snake()
-        self.hunger_event = pygame.USEREVENT + 1
-        self.hunger_value = 100
         self.d_x, self.d_y = 0, 0
         self.refresh_food = False
+        self.score = 200
+        self.new_score = self.score
+        self.reward = 0
+
+    def restart(self):
+        self.snake = Snake()
+        self.food = self.rand_pos()
+        self.game_over = False
+        self.d_x, self.d_y = 0, 0
+        self.refresh_food = False
+        self.score = 200
+        self.new_score = self.score
+        self.reward = 0
 
     def start(self):
-        self.gameloop()
+        for _ in range(300):
+            self.restart()
+            self.gameloop()
 
     def gameloop(self):
-        while True:
-            while self.game_over:
-                self.window_surface.fill(BLUE)
-                game_over_text = pygame.font.SysFont(None, 30)
-                game_over_text_surface = game_over_text.render('Game Over!', True, RED)
-                self.window_surface.blit(game_over_text_surface, (WINDOW_SIZE[0] / 2 - 60, WINDOW_SIZE[1] / 2))
-                self.snake.kill()
-                pygame.display.update()
-                for event in pygame.event.get():
-                    if event.type == QUIT:
-                        pygame.quit()
-                        sys.exit()
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == KEYDOWN:
-                    set_hunger_timer(self.hunger_event)
-                    if event.key == K_UP:
-                        self.d_x = 0
-                        self.d_y = -SNAKE_SIZE
-                    elif event.key == K_DOWN:
-                        self.d_x = 0
-                        self.d_y = SNAKE_SIZE
-                    elif event.key == K_LEFT:
-                        self.d_x = -SNAKE_SIZE
-                        self.d_y = 0
-                    elif event.key == K_RIGHT:
-                        self.d_x = SNAKE_SIZE
-                        self.d_y = 0
-                if event.type == self.hunger_event:
-                    self.hunger_value -= self.difficulty
-                    # if self.hunger_value < 0:
-                    #     self.game_over = True
-            if self.ai:
-                move = self.ai.get_movement()
-                if move == 'u':
-                    self.move_u()
-                elif move == 'd':
-                    self.move_d()
-                elif move == 'r':
-                    self.move_r()
-                elif move == 'l':
-                    self.move_l()
-                else:
-                    raise Exception('Wrong movement string.')
+        while not self.game_over:
+
+            # Refresh screen
             self.window_surface.fill((0, 0, 0))
+
+            # Draw food
             if not self.refresh_food:
                 pygame.draw.ellipse(self.window_surface, GREEN, self.food)
             else:
-                self.food = rand_pos()
+                self.food = self.rand_pos()
                 pygame.draw.ellipse(self.window_surface, GREEN, self.food)
                 self.refresh_food = False
+
+            # Draw snake's body
             now_pos = self.snake.body[0]
             self.snake.body.insert(0, [now_pos[0] + self.d_x, now_pos[1] + self.d_y, SNAKE_SIZE, SNAKE_SIZE])
             if len(self.snake.body) > self.snake.length:
@@ -106,31 +81,84 @@ class Game:
                 pygame.draw.rect(self.window_surface, BLUE, part)
                 pygame.draw.rect(self.window_surface, (60, 106, 255),
                                  [part[0] + 5, part[1] + 5, SNAKE_SIZE - 10, SNAKE_SIZE - 10])
-            if self.snake.body[0][0] >= WINDOW_SIZE[0] or self.snake.body[0][0] <= 0 \
-                    or self.snake.body[0][1] >= WINDOW_SIZE[1] or self.snake.body[0][1] <= 0:
+
+            # See if snake touch the wall
+            if self.snake.body[0][0] > WINDOW_SIZE[0] or self.snake.body[0][0] < 0 \
+                    or self.snake.body[0][1] > WINDOW_SIZE[1] or self.snake.body[0][1] < 0:
                 self.game_over = True
                 game_over_text = pygame.font.SysFont(None, 30)
                 game_over_text_surface = game_over_text.render('Game Over!', True, RED)
                 self.window_surface.blit(game_over_text_surface, (WINDOW_SIZE[0] / 2 - 60, WINDOW_SIZE[1] / 2))
                 self.snake.kill()
                 pygame.display.update()
+                self.new_score -= 100000
+
+            # When snake eats
             if self.snake.body[0][0] == self.food[0] and self.snake.body[0][1] == self.food[1]:
-                print('eat food')
                 self.refresh_food = True
                 self.snake.length += 1
-                self.hunger_value += self.difficulty
+                self.new_score += 30
+
+            # When snake touch it's body
             for i in range(1, len(self.snake.body)):
                 if self.snake.body[0] == self.snake.body[i]:
                     self.game_over = True
-            hunger_text = pygame.font.SysFont(None, 30)
-            hunger_text_surface = hunger_text.render(f'hunger: {self.hunger_value}', True, (255, 255, 255))
-            self.window_surface.blit(hunger_text_surface, (10, 10))
-            pygame.display.update()
-            print(self.get_state())
-            self.clock.tick(5)
+                    self.new_score -= 100000
 
-    def get_state(self):
-        # return distance to wall, distance to food distance to self(min)
+            # Write down score
+            score_text = pygame.font.SysFont(None, 30)
+            score_text_surface = score_text.render(f'score: {self.score}', True, (255, 255, 255))
+            self.window_surface.blit(score_text_surface, (10, 10))
+            pygame.display.update()
+
+            # Calculate reward
+            self.new_score -= 1
+            self.reward = self.new_score - self.score
+            self.score = self.new_score
+            print(self.reward)
+
+            # Movement
+            if not self.ai:
+                # for human(Keyboard)
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    if event.type == KEYDOWN:
+                        if event.key == K_UP:
+                            self.d_x = 0
+                            self.d_y = -SNAKE_SIZE
+                        elif event.key == K_DOWN:
+                            self.d_x = 0
+                            self.d_y = SNAKE_SIZE
+                        elif event.key == K_LEFT:
+                            self.d_x = -SNAKE_SIZE
+                            self.d_y = 0
+                        elif event.key == K_RIGHT:
+                            self.d_x = SNAKE_SIZE
+                            self.d_y = 0
+            else:
+                # for AI
+                action = self.ai.get_movement(self.step())
+                print(action)
+                if action == Action.UP:
+                    self.d_x, self.d_y = 0, -SNAKE_SIZE
+                elif action == Action.DOWN:
+                    self.d_x, self.d_y = 0, SNAKE_SIZE
+                elif action == Action.RIGHT:
+                    self.d_x, self.d_y = SNAKE_SIZE, 0
+                elif action == Action.LEFT:
+                    self.d_x, self.d_y = -SNAKE_SIZE, 0
+                else:
+                    self.d_x, self.d_y = 0, 0
+
+            # Refresh rate
+            self.clock.tick(10)
+
+    def step(self):
+        # return [distance to wall, distance to food, distance to self(min)],
+        # reward
+        # gameover
         head = (self.snake.body[0][0], self.snake.body[0][1])
         body_u, body_d, body_r, body_l = float('inf'), float('inf'), float('inf'), float('inf')
         for body in self.snake.body:
@@ -177,7 +205,7 @@ class Game:
             # left
             self.secure(body_l)
         ]
-        return np.array(state, dtype=np.float)
+        return np.array(state, dtype=np.float), self.reward, self.game_over
 
     def move_u(self):
         self.d_x, self.d_y = 0, -SNAKE_SIZE
@@ -198,30 +226,23 @@ class Game:
         else:
             return x
 
-
-def rand_pos():
-    rx, ry = 0, 0
-    while rx == 0 or ry == 0:
+    def rand_pos(self):
         rx = random.randint(0, WINDOW_SIZE[0] - SNAKE_SIZE)
         rx = rx // SNAKE_SIZE * SNAKE_SIZE
         ry = random.randint(0, WINDOW_SIZE[1] - SNAKE_SIZE)
         ry = ry // SNAKE_SIZE * SNAKE_SIZE
-        print(rx, ry)
-    return rx, ry, SNAKE_SIZE, SNAKE_SIZE
-
-
-is_event_set = False
-
-
-def set_hunger_timer(event):
-    global is_event_set
-    if not is_event_set:
-        pygame.time.set_timer(event, 1000)
-        is_event_set = True
+        for body in self.snake.body:
+            while rx == body[0] and ry == body[1]:
+                rx = random.randint(0, WINDOW_SIZE[0] - SNAKE_SIZE)
+                rx = rx // SNAKE_SIZE * SNAKE_SIZE
+                ry = random.randint(0, WINDOW_SIZE[1] - SNAKE_SIZE)
+                ry = ry // SNAKE_SIZE * SNAKE_SIZE
+        return rx, ry, SNAKE_SIZE, SNAKE_SIZE
 
 
 def main():
-    game = Game()
+    ai = AI()
+    game = Game(ai=ai)
     game.start()
 
 
