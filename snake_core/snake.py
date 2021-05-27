@@ -6,7 +6,6 @@ import numpy as np
 import pygame
 from pygame.locals import QUIT, KEYDOWN, K_UP, K_DOWN, K_RIGHT, K_LEFT
 
-from agent import AI
 from helper import Action
 
 RED = (255, 0, 0)
@@ -24,7 +23,7 @@ class Snake(pygame.sprite.Sprite):
 
 
 class Game:
-    def __init__(self, ai=None):
+    def __init__(self, ai=False):
         self.snake = Snake()
         pygame.init()
         random.seed(time.time())
@@ -32,9 +31,6 @@ class Game:
         pygame.display.set_caption('Snake game by AI team')
         self.clock = pygame.time.Clock()
 
-        self.ai = None
-        if ai:
-            self.ai = ai
         self.food = self.rand_pos()
         self.game_over = False
         self.d_x, self.d_y = 0, 0
@@ -42,24 +38,72 @@ class Game:
         self.score = 200
         self.new_score = self.score
         self.reward = 0
+        self.action = Action.NONE
+        self.ai = ai
 
-    def restart(self):
+    def reset(self):
         self.snake = Snake()
-        self.food = self.rand_pos()
+        self.food = (WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] // 2 - SNAKE_SIZE, SNAKE_SIZE, SNAKE_SIZE)
         self.game_over = False
         self.d_x, self.d_y = 0, 0
         self.refresh_food = False
         self.score = 200
         self.new_score = self.score
         self.reward = 0
+        self.action = Action.NONE
+        return self.step()
 
     def start(self):
-        for _ in range(300):
-            self.restart()
-            self.gameloop()
+        self.gameloop()
 
     def gameloop(self):
-        while not self.game_over:
+        while True:
+            self.move_reset()
+            # Movement
+            # for human(Keyboard)
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == KEYDOWN:
+                    if event.key == K_UP:
+                        self.d_x = 0
+                        self.d_y = -SNAKE_SIZE
+                    elif event.key == K_DOWN:
+                        self.d_x = 0
+                        self.d_y = SNAKE_SIZE
+                    elif event.key == K_LEFT:
+                        self.d_x = -SNAKE_SIZE
+                        self.d_y = 0
+                    elif event.key == K_RIGHT:
+                        self.d_x = SNAKE_SIZE
+                        self.d_y = 0
+
+            # Calculate reward
+            if not self.ai:
+                self.new_score -= 1
+                self.reward = self.new_score - self.score
+                self.score = self.new_score
+
+            # ai movement
+            if self.ai:
+                if self.action != Action.NONE:
+                    # Calculate reward
+                    self.new_score -= 1
+                    self.reward = self.new_score - self.score
+                    self.score = self.new_score
+
+                    # do action
+                    if self.action == Action.UP:
+                        self.move_u()
+                    elif self.action == Action.DOWN:
+                        self.move_d()
+                    elif self.action == Action.RIGHT:
+                        self.move_r()
+                    elif self.action == Action.LEFT:
+                        self.move_l()
+                    self.action = Action.NONE
+
 
             # Refresh screen
             self.window_surface.fill((0, 0, 0))
@@ -111,51 +155,18 @@ class Game:
             self.window_surface.blit(score_text_surface, (10, 10))
             pygame.display.update()
 
-            # Calculate reward
-            self.new_score -= 1
-            self.reward = self.new_score - self.score
-            self.score = self.new_score
-            print(self.reward)
-
-            # Movement
-            if not self.ai:
-                # for human(Keyboard)
-                for event in pygame.event.get():
-                    if event.type == QUIT:
-                        pygame.quit()
-                        sys.exit()
-                    if event.type == KEYDOWN:
-                        if event.key == K_UP:
-                            self.d_x = 0
-                            self.d_y = -SNAKE_SIZE
-                        elif event.key == K_DOWN:
-                            self.d_x = 0
-                            self.d_y = SNAKE_SIZE
-                        elif event.key == K_LEFT:
-                            self.d_x = -SNAKE_SIZE
-                            self.d_y = 0
-                        elif event.key == K_RIGHT:
-                            self.d_x = SNAKE_SIZE
-                            self.d_y = 0
-            else:
-                # for AI
-                action = self.ai.get_movement(self.step())
-                print(action)
-                if action == Action.UP:
-                    self.d_x, self.d_y = 0, -SNAKE_SIZE
-                elif action == Action.DOWN:
-                    self.d_x, self.d_y = 0, SNAKE_SIZE
-                elif action == Action.RIGHT:
-                    self.d_x, self.d_y = SNAKE_SIZE, 0
-                elif action == Action.LEFT:
-                    self.d_x, self.d_y = -SNAKE_SIZE, 0
-                else:
-                    self.d_x, self.d_y = 0, 0
+            if self.game_over:
+                self.game_over = False
+                pygame.event.pump()
+                self.reset()
+                print('----------------new game----------------------')
 
             # Refresh rate
             self.clock.tick(10)
 
-    def step(self):
+    def step(self, action=Action.NONE):
+        # do action
+        self.action = action
         # return [distance to wall, distance to food, distance to self(min)],
         # reward
         # gameover
@@ -177,33 +188,33 @@ class Game:
         state = [
             # distance to wall
             # up
-            head[1],
+            head[1] / WINDOW_SIZE[0],
             # down
-            WINDOW_SIZE[1] - head[1],
+            (WINDOW_SIZE[1] - head[1]) / WINDOW_SIZE[0],
             # left
-            head[0],
+            head[0] / WINDOW_SIZE[0],
             # right
-            WINDOW_SIZE[0] - head[0],
+            (WINDOW_SIZE[0] - head[0]) / WINDOW_SIZE[0],
 
             # distance to food
             # up
-            self.secure(head[1] - self.food[1]),
+            (self.secure(head[1] - self.food[1])) / WINDOW_SIZE[0],
             # down
-            self.secure(self.food[1] - head[1]),
+            (self.secure(self.food[1] - head[1])) / WINDOW_SIZE[0],
             # right
-            self.secure(self.food[0] - head[0]),
+            (self.secure(self.food[0] - head[0])) / WINDOW_SIZE[0],
             # left
-            self.secure(head[0] - self.food[0]),
+            (self.secure(head[0] - self.food[0])) / WINDOW_SIZE[0],
 
             # distance to self
             # up
-            self.secure(body_u),
+            self.secure(body_u) / WINDOW_SIZE[0],
             # down
-            self.secure(body_d),
+            self.secure(body_d) / WINDOW_SIZE[0],
             # right
-            self.secure(body_r),
+            self.secure(body_r) / WINDOW_SIZE[0],
             # left
-            self.secure(body_l)
+            self.secure(body_l) / WINDOW_SIZE[0]
         ]
         return np.array(state, dtype=np.float), self.reward, self.game_over
 
@@ -218,6 +229,9 @@ class Game:
 
     def move_l(self):
         self.d_x, self.d_y = -SNAKE_SIZE, 0
+
+    def move_reset(self):
+        self.d_x, self.d_y = 0, 0
 
     @staticmethod
     def secure(x):
@@ -241,8 +255,7 @@ class Game:
 
 
 def main():
-    ai = AI()
-    game = Game(ai=ai)
+    game = Game(ai=True)
     game.start()
 
 
