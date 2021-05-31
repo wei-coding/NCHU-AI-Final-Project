@@ -4,11 +4,13 @@ import numpy as np
 
 
 class QTrainer:
-    def __init__(self, lr, input_size, hidden_size, output_size, gamma):
+    def __init__(self, n_state, lr, input_size, hidden_size, output_size, gamma):
+        self.n_state = n_state
         self.gamma = gamma
         self.model = tf.keras.Sequential()
-        self.model.add(Dense(input_size, activation='relu', input_shape=(1, 11)))
-        self.model.add(Dense(hidden_size, activation='relu'))
+        self.model.add(Dense(input_size, activation='relu', input_shape=(1, n_state)))
+        for size in hidden_size:
+            self.model.add(Dense(size, activation='softmax'))
         self.model.add(Dense(output_size, activation='linear'))
         self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='mse')
 
@@ -34,12 +36,12 @@ class QTrainer:
             Q_new = reward[idx]
             if not done[idx]:
                 state_t = np.array(next_state[idx])
-                state_t = np.reshape(state_t, (1, 11))
+                state_t = np.reshape(state_t, (1, self.n_state))
                 Q_new = reward[idx] + self.gamma * np.max(self.model.predict(state_t))
 
             target[idx][np.argmax(action)] = Q_new
 
-        self.model.fit(np.reshape(state, (-1, 11)), target)
+        self.model.fit(np.reshape(state, (-1, self.n_state)), target)
 
 
 

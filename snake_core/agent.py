@@ -14,10 +14,11 @@ class Agent:
 
     def __init__(self):
         self.n_games = 0
+        self.n_state = 14
         self.epsilion = 0
-        self.gamma = 0.9
+        self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
-        self.trainer = QTrainer(LR, 11, 256, 3, self.gamma)
+        self.trainer = QTrainer(self.n_state, LR, self.n_state, [64, 64], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
@@ -25,6 +26,11 @@ class Agent:
         point_r = Point(head.x + BLOCK_SIZE, head.y)
         point_u = Point(head.x, head.y - BLOCK_SIZE)
         point_d = Point(head.x, head.y + BLOCK_SIZE)
+
+        point_l_2 = Point(head.x - 2 * BLOCK_SIZE, head.y)
+        point_r_2 = Point(head.x + 2 * BLOCK_SIZE, head.y)
+        point_u_2 = Point(head.x, head.y - 2 * BLOCK_SIZE)
+        point_d_2 = Point(head.x, head.y + 2 * BLOCK_SIZE)
 
         dir_l = game.direction == Direction.LEFT
         dir_r = game.direction == Direction.RIGHT
@@ -38,17 +44,35 @@ class Agent:
             (dir_u and game.is_collision(point_u)) or
             (dir_d and game.is_collision(point_d)),
 
+            # danger straight 2 step
+            (dir_r and game.is_collision(point_r_2)) or
+            (dir_l and game.is_collision(point_l_2)) or
+            (dir_u and game.is_collision(point_u_2)) or
+            (dir_d and game.is_collision(point_d_2)),
+
             # danger right
             (dir_u and game.is_collision(point_r)) or
             (dir_d and game.is_collision(point_l)) or
             (dir_l and game.is_collision(point_u)) or
             (dir_r and game.is_collision(point_d)),
 
+            # danger right 2 step
+            (dir_u and game.is_collision(point_r_2)) or
+            (dir_d and game.is_collision(point_l_2)) or
+            (dir_l and game.is_collision(point_u_2)) or
+            (dir_r and game.is_collision(point_d_2)),
+
             # danger left
             (dir_d and game.is_collision(point_r)) or
             (dir_u and game.is_collision(point_l)) or
             (dir_r and game.is_collision(point_u)) or
             (dir_l and game.is_collision(point_d)),
+
+            # danger left 2 step
+            (dir_d and game.is_collision(point_r_2)) or
+            (dir_u and game.is_collision(point_l_2)) or
+            (dir_r and game.is_collision(point_u_2)) or
+            (dir_l and game.is_collision(point_d_2)),
 
             # move direction
             dir_l,
@@ -83,7 +107,7 @@ class Agent:
     def get_action(self, state):
         # random move
         state = np.array(state)
-        state = np.reshape(state, (1, 11))
+        state = np.reshape(state, (1, self.n_state))
         self.epsilion = 0.01
         final_move = [0, 0, 0]
         if random.random() <= self.epsilion:
@@ -107,7 +131,7 @@ def train():
         except ValueError:
             print('log.txt not found.')
     agent = Agent()
-    agent.trainer.load_model()
+    # agent.trainer.load_model('model_14state_10.h5')
     game = SnakeGameAI()
     while True:
         # get old state
@@ -132,11 +156,11 @@ def train():
             agent.n_games += 1
             agent.train_long_memory()
 
-            if score >= record:
+            if score > record:
                 record = score
                 with open('log.txt', 'w+') as f:
                     f.write(str(record))
-                agent.trainer.save_model()
+                agent.trainer.save_model(f'model_14state_{record}.h5')
 
             print('Game', agent.n_games, 'Score', score, 'Record', record)
 
