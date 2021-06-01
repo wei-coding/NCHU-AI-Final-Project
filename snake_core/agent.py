@@ -44,35 +44,17 @@ class Agent:
             (dir_u and game.is_collision(point_u)) or
             (dir_d and game.is_collision(point_d)),
 
-            # danger straight 2 step
-            (dir_r and game.is_collision(point_r_2)) or
-            (dir_l and game.is_collision(point_l_2)) or
-            (dir_u and game.is_collision(point_u_2)) or
-            (dir_d and game.is_collision(point_d_2)),
-
             # danger right
             (dir_u and game.is_collision(point_r)) or
             (dir_d and game.is_collision(point_l)) or
             (dir_l and game.is_collision(point_u)) or
             (dir_r and game.is_collision(point_d)),
 
-            # danger right 2 step
-            (dir_u and game.is_collision(point_r_2)) or
-            (dir_d and game.is_collision(point_l_2)) or
-            (dir_l and game.is_collision(point_u_2)) or
-            (dir_r and game.is_collision(point_d_2)),
-
             # danger left
             (dir_d and game.is_collision(point_r)) or
             (dir_u and game.is_collision(point_l)) or
             (dir_r and game.is_collision(point_u)) or
             (dir_l and game.is_collision(point_d)),
-
-            # danger left 2 step
-            (dir_d and game.is_collision(point_r_2)) or
-            (dir_u and game.is_collision(point_l_2)) or
-            (dir_r and game.is_collision(point_u_2)) or
-            (dir_l and game.is_collision(point_d_2)),
 
             # move direction
             dir_l,
