@@ -18,7 +18,7 @@ class Agent:
         self.epsilon = 0.1
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
-        self.trainer = QTrainer(self.n_state, LR, self.n_state, [256, 512, 256], 3, self.gamma)
+        self.trainer = QTrainer(self.n_state, LR, self.n_state, [256, 256], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
