@@ -6,7 +6,7 @@ import random
 from model import QTrainer
 
 MAX_MEM = 100_000
-BATCH_SIZE = 1000
+BATCH_SIZE = 500
 LR = 0.001
 
 
@@ -14,11 +14,11 @@ class Agent:
 
     def __init__(self):
         self.n_games = 0
-        self.n_state = 14
-        self.epsilion = 0
+        self.n_state = 11
+        self.epsilon = 0.1
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
-        self.trainer = QTrainer(self.n_state, LR, self.n_state, [64, 64], 3, self.gamma)
+        self.trainer = QTrainer(self.n_state, LR, self.n_state, [256, 512, 256], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
@@ -84,7 +84,7 @@ class Agent:
             game.food.x < game.head.x,
             game.food.x > game.head.x,
             game.food.y < game.head.y,
-            game.food.y > game.head.y
+            game.food.y > game.head.y,
         ]
 
         return np.array(state, dtype=np.uint8)
@@ -102,19 +102,20 @@ class Agent:
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 
     def train_short_memory(self, state, action, reward, next_state, done):
+        print('reward =', reward)
         self.trainer.train_step((state, ), (action,), (reward,), (next_state,), (done,))
 
     def get_action(self, state):
         # random move
         state = np.array(state)
         state = np.reshape(state, (1, self.n_state))
-        self.epsilion = 0.01
         final_move = [0, 0, 0]
-        if random.random() <= self.epsilion:
+        epsilon = self.epsilon * 0.99
+        self.epsilon = epsilon
+        if random.random() < epsilon:
             move = random.randint(0, 2)
             final_move[move] = 1
         else:
-            print(state)
             prediction = self.trainer.model.predict(state)
             move = np.argmax(prediction)
             final_move[move] = 1
@@ -123,16 +124,12 @@ class Agent:
 
 
 def train():
+    tot_score = 0
     print(tf.test.is_gpu_available())
     record = 0
-    with open('log.txt', 'w+') as f:
-        try:
-            record = int(f.readline().strip())
-        except ValueError:
-            print('log.txt not found.')
     agent = Agent()
-    # agent.trainer.load_model('model_14state_10.h5')
     game = SnakeGameAI()
+    # agent.trainer.load_model('model_11state_2hidden_260.h5')
     while True:
         # get old state
         state_old = agent.get_state(game)
@@ -155,14 +152,16 @@ def train():
             game.reset()
             agent.n_games += 1
             agent.train_long_memory()
+            tot_score += score
 
             if score > record:
                 record = score
-                with open('log.txt', 'w+') as f:
-                    f.write(str(record))
-                agent.trainer.save_model(f'model_14state_{record}.h5')
+                agent.trainer.save_model(f'model_11state_2hidden_{record}.h5')
 
+            print('*'*10)
             print('Game', agent.n_games, 'Score', score, 'Record', record)
+            print('AVG score', tot_score / agent.n_games)
+            print('*'*10)
 
 
 if __name__ == '__main__':

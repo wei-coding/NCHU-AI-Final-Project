@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, Dropout
 import numpy as np
 
 
@@ -10,7 +10,7 @@ class QTrainer:
         self.model = tf.keras.Sequential()
         self.model.add(Dense(input_size, activation='relu', input_shape=(1, n_state)))
         for size in hidden_size:
-            self.model.add(Dense(size, activation='softmax'))
+            self.model.add(Dense(size, activation='relu'))
         self.model.add(Dense(output_size, activation='linear'))
         self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='mse')
 
@@ -41,7 +41,7 @@ class QTrainer:
 
             target[idx][np.argmax(action)] = Q_new
 
-        self.model.fit(np.reshape(state, (-1, self.n_state)), target)
+        self.model.fit(np.reshape(state, (-1, self.n_state)), target, verbose=1)
 
 
 

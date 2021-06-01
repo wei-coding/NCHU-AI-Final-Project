@@ -53,6 +53,7 @@ class SnakeGameAI:
         self.food = None
         self._place_food()
         self.frame_iteration = 0
+        self.last_loc = self.head
 
     def _place_food(self):
         rx = random.randint(0, self.w - BLOCK_SIZE)
@@ -78,7 +79,7 @@ class SnakeGameAI:
         # game over?
         reward = 0
         game_over = False
-        if self.is_collision() or self.frame_iteration > 100 * len(self.snake):
+        if self.is_collision() or self.frame_iteration > 50 * len(self.snake):
             game_over = True
             reward = -10
             return reward, game_over, self.score
@@ -88,9 +89,18 @@ class SnakeGameAI:
             self.score += 10
             reward = 10
             self._place_food()
+            self._update_ui()
+            self.clock.tick(SPEED)
+            return reward, game_over, self.score
         else:
-            reward = -1
             self.snake.pop()
+
+        # get close to food?
+        if abs(self.food.x - self.head.x) <= abs(self.food.x - self.last_loc.x) and abs(self.food.y - self.head.y) <= abs(self.food.y - self.last_loc.y):
+            reward = 2
+        elif abs(self.food.x - self.head.x) > abs(self.food.x - self.last_loc.x) or abs(self.food.y - self.head.y) > abs(self.food.y - self.last_loc.y):
+            reward = -2
+        self.last_loc = self.head
 
         # update ui and clock
         self._update_ui()
