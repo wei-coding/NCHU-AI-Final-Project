@@ -15,15 +15,15 @@ class Agent:
 
     def __init__(self):
         self.n_games = 0
-        self.n_state = 14
-        self.frame_to_read = 5
+        self.n_state = 11
+        self.frame_to_read = 1
         self.epsilon = 0.4
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
         self.states = deque(maxlen=self.frame_to_read)
         for _ in range(self.frame_to_read):
             self.states.append([0 for _ in range(self.n_state)])
-        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [256, 512, 256], 3, self.gamma)
+        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [256], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
@@ -61,23 +61,23 @@ class Agent:
             (dir_r and game.is_collision(point_u)) or
             (dir_l and game.is_collision(point_d)),
 
-            # danger straight 2 step
-            (dir_r and game.is_collision(point_r_2)) or
-            (dir_l and game.is_collision(point_l_2)) or
-            (dir_u and game.is_collision(point_u_2)) or
-            (dir_d and game.is_collision(point_d_2)),
-
-            # danger right 2 step
-            (dir_u and game.is_collision(point_r_2)) or
-            (dir_d and game.is_collision(point_l_2)) or
-            (dir_l and game.is_collision(point_u_2)) or
-            (dir_r and game.is_collision(point_d_2)),
-
-            # danger left 2 step
-            (dir_d and game.is_collision(point_r_2)) or
-            (dir_u and game.is_collision(point_l_2)) or
-            (dir_r and game.is_collision(point_u_2)) or
-            (dir_l and game.is_collision(point_d_2)),
+            # # danger straight 2 step
+            # (dir_r and game.is_collision(point_r_2)) or
+            # (dir_l and game.is_collision(point_l_2)) or
+            # (dir_u and game.is_collision(point_u_2)) or
+            # (dir_d and game.is_collision(point_d_2)),
+            #
+            # # danger right 2 step
+            # (dir_u and game.is_collision(point_r_2)) or
+            # (dir_d and game.is_collision(point_l_2)) or
+            # (dir_l and game.is_collision(point_u_2)) or
+            # (dir_r and game.is_collision(point_d_2)),
+            #
+            # # danger left 2 step
+            # (dir_d and game.is_collision(point_r_2)) or
+            # (dir_u and game.is_collision(point_l_2)) or
+            # (dir_r and game.is_collision(point_u_2)) or
+            # (dir_l and game.is_collision(point_d_2)),
 
             # move direction
             dir_l,
@@ -120,6 +120,7 @@ class Agent:
         epsilon = self.epsilon * 0.99
         self.epsilon = epsilon
         if random.random() < epsilon:
+            print('random behavior')
             move = random.randint(0, 2)
             final_move[move] = 1
         else:
@@ -162,9 +163,9 @@ def train(record=0, n_games=0):
 
             if score > record:
                 record = score
-                agent.trainer.save_model(f'model_70state_3hidden_{record}_{agent.n_games}.h5')
+                agent.trainer.save_model(f'model_11state_1hidden_{record}_{agent.n_games}.h5')
             if agent.n_games % 10 == 0:
-                agent.trainer.save_model(f'model_70state_3hidden_{record}_{agent.n_games}.h5')
+                agent.trainer.save_model(f'model_11state_1hidden_{record}_{agent.n_games}.h5')
             save_logs(record, score, agent.n_games)
 
             print('*'*10)
