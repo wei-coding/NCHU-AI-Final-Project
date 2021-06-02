@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, Flatten
+from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 import numpy as np
 
 
@@ -8,9 +8,13 @@ class QTrainer:
         self.n_state = n_state
         self.gamma = gamma
         self.model = tf.keras.Sequential()
+        self.model.add(Conv2D(8, (3, 3), activation='relu', input_shape=(32, 24, 1)))
+        self.model.add(MaxPooling2D((2, 2)))
+        self.model.add(Conv2D(32, (3, 3), activation='relu'))
+        self.model.add(MaxPooling2D((2, 2)))
+
         self.model.add(Flatten())
-        for size in hidden_size:
-            self.model.add(Dense(size, activation='relu'))
+        self.model.add(Dense(512, activation='relu'))
         self.model.add(Dense(output_size, activation='linear'))
         self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='mse')
 
@@ -36,12 +40,12 @@ class QTrainer:
             Q_new = reward[idx]
             if not done[idx]:
                 state_t = np.array(next_state[idx])
-                state_t = np.reshape(state_t, (1, self.n_state))
+                state_t = np.reshape(state_t, (-1, 32, 24, 1))
                 Q_new = reward[idx] + self.gamma * np.max(self.model.predict(state_t))
 
             target[idx][np.argmax(action)] = Q_new
 
-        self.model.fit(np.reshape(state, (-1, self.n_state)), target, verbose=1)
+        self.model.fit(np.reshape(state, (-1, 32, 24, 1)), target, verbose=1)
 
 
 
