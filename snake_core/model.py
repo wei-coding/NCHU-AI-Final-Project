@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout, Flatten
 import numpy as np
 
 
@@ -8,7 +8,7 @@ class QTrainer:
         self.n_state = n_state
         self.gamma = gamma
         self.model = tf.keras.Sequential()
-        self.model.add(Dense(input_size, activation='relu', input_shape=(1, n_state)))
+        self.model.add(Flatten())
         for size in hidden_size:
             self.model.add(Dense(size, activation='relu'))
         self.model.add(Dense(output_size, activation='linear'))

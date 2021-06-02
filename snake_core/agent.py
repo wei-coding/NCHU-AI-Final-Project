@@ -4,6 +4,7 @@ from environment import SnakeGameAI, Direction, Point, BLOCK_SIZE
 import numpy as np
 import random
 from model import QTrainer
+import csv
 
 MAX_MEM = 100_000
 BATCH_SIZE = 500
@@ -14,11 +15,15 @@ class Agent:
 
     def __init__(self):
         self.n_games = 0
-        self.n_state = 11
-        self.epsilon = 0.1
+        self.n_state = 14
+        self.frame_to_read = 5
+        self.epsilon = 0.4
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
-        self.trainer = QTrainer(self.n_state, LR, self.n_state, [256, 256], 3, self.gamma)
+        self.states = deque(maxlen=self.frame_to_read)
+        for _ in range(self.frame_to_read):
+            self.states.append([0 for _ in range(self.n_state)])
+        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [256, 512, 256], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
@@ -27,7 +32,7 @@ class Agent:
         point_u = Point(head.x, head.y - BLOCK_SIZE)
         point_d = Point(head.x, head.y + BLOCK_SIZE)
 
-        point_l_2 = Point(head.x - 2 * BLOCK_SIZE, head.y)
+        point_l_2 = Point(head.x - 2 *BLOCK_SIZE, head.y)
         point_r_2 = Point(head.x + 2 * BLOCK_SIZE, head.y)
         point_u_2 = Point(head.x, head.y - 2 * BLOCK_SIZE)
         point_d_2 = Point(head.x, head.y + 2 * BLOCK_SIZE)
@@ -56,6 +61,24 @@ class Agent:
             (dir_r and game.is_collision(point_u)) or
             (dir_l and game.is_collision(point_d)),
 
+            # danger straight 2 step
+            (dir_r and game.is_collision(point_r_2)) or
+            (dir_l and game.is_collision(point_l_2)) or
+            (dir_u and game.is_collision(point_u_2)) or
+            (dir_d and game.is_collision(point_d_2)),
+
+            # danger right 2 step
+            (dir_u and game.is_collision(point_r_2)) or
+            (dir_d and game.is_collision(point_l_2)) or
+            (dir_l and game.is_collision(point_u_2)) or
+            (dir_r and game.is_collision(point_d_2)),
+
+            # danger left 2 step
+            (dir_d and game.is_collision(point_r_2)) or
+            (dir_u and game.is_collision(point_l_2)) or
+            (dir_r and game.is_collision(point_u_2)) or
+            (dir_l and game.is_collision(point_d_2)),
+
             # move direction
             dir_l,
             dir_r,
@@ -69,7 +92,9 @@ class Agent:
             game.food.y > game.head.y,
         ]
 
-        return np.array(state, dtype=np.uint8)
+        self.states.append(state)
+
+        return np.array(list(self.states), dtype=np.uint8)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -90,7 +115,7 @@ class Agent:
     def get_action(self, state):
         # random move
         state = np.array(state)
-        state = np.reshape(state, (1, self.n_state))
+        state = np.reshape(state, (-1, self.n_state * self.frame_to_read))
         final_move = [0, 0, 0]
         epsilon = self.epsilon * 0.99
         self.epsilon = epsilon
@@ -105,13 +130,12 @@ class Agent:
         return final_move
 
 
-def train():
+def train(record=0, n_games=0):
     tot_score = 0
     print(tf.test.is_gpu_available())
-    record = 0
     agent = Agent()
     game = SnakeGameAI()
-    # agent.trainer.load_model('model_11state_2hidden_260.h5')
+    # agent.trainer.load_model('model_11state_2hidden_530.h5')
     while True:
         # get old state
         state_old = agent.get_state(game)
@@ -138,7 +162,10 @@ def train():
 
             if score > record:
                 record = score
-                agent.trainer.save_model(f'model_11state_2hidden_{record}.h5')
+                agent.trainer.save_model(f'model_70state_3hidden_{record}_{agent.n_games}.h5')
+            if agent.n_games % 10 == 0:
+                agent.trainer.save_model(f'model_70state_3hidden_{record}_{agent.n_games}.h5')
+            save_logs(record, score, agent.n_games)
 
             print('*'*10)
             print('Game', agent.n_games, 'Score', score, 'Record', record)
@@ -146,5 +173,29 @@ def train():
             print('*'*10)
 
 
+def load_logs():
+    record = 0
+    n_games = 0
+    with open('logs.csv') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            record = max(record, row['record'])
+            n_games = max(n_games, row['n_games'])
+    return record, n_games
+
+
+def save_logs(record, score, n_games, init=False):
+    if init:
+        with open('logs.csv', 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
+            writer.writeheader()
+    else:
+        with open('logs.csv', 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
+            writer.writerow({'record': record, 'score': score, 'n_games': n_games})
+
+
 if __name__ == '__main__':
+    # record, n_games = load_logs()
+    save_logs(0, 0, 0, True)
     train()
