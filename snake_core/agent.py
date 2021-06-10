@@ -18,14 +18,15 @@ class Agent:
         self.n_games = 0
         self.n_state = (640 // BLOCK_SIZE) * (480 // BLOCK_SIZE)
         self.frame_to_read = 1
-        self.epsilon = 0.4
+        self.epsilon = 0.3
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
+        self.states = np.zeros((3, 32, 24), dtype=np.float32)
         self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [256, 512, 256], 3, self.gamma)
         random.seed(time.time())
 
     def get_state(self, game):
-        state = np.zeros((32, 24))
+        state = np.zeros((32, 24), dtype=np.float32)
         for body in game.snake:
             try:
                 state[int(body.x // BLOCK_SIZE)][int(body.y // BLOCK_SIZE)] = 1
@@ -33,9 +34,14 @@ class Agent:
                 pass
         state[int(game.food.x // BLOCK_SIZE)][int(game.food.y // BLOCK_SIZE)] = 2
         state = np.array(state, dtype=np.float32)
-        state = state.reshape((32, 24, 1))
+        temp = np.copy(self.states)
+        temp[0, :, :] = self.states[1, :, :]
+        temp[1, :, :] = self.states[2, :, :]
+        temp[2, :, :] = state
+        self.states = temp
+        print(temp.shape)
 
-        return state
+        return np.transpose(temp, (1, 2, 0))
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -55,11 +61,9 @@ class Agent:
 
     def get_action(self, state):
         # random move
-        state = np.reshape(state, (-1, 640 // BLOCK_SIZE, 480 // BLOCK_SIZE, self.frame_to_read))
+        state = np.reshape(state, (-1, 640 // BLOCK_SIZE, 480 // BLOCK_SIZE, 3))
         final_move = [0, 0, 0]
-        epsilon = self.epsilon * 0.99
-        self.epsilon = epsilon
-        if random.random() < epsilon:
+        if random.random() < self.epsilon:
             move = random.randint(0, 2)
             final_move[move] = 1
         else:
@@ -101,12 +105,13 @@ def train(record=0, n_games=0, filename='logs.csv'):
             agent.n_games += 1
             agent.train_long_memory()
             tot_score += score
+            agent.epsilon *= 0.99
 
             if score > record:
                 record = score
-                agent.trainer.save_model(f'models/model_11state_1hidden_noreward_{record}_{agent.n_games}.h5')
+                agent.trainer.save_model(f'model_{record}_{agent.n_games}.h5')
             if agent.n_games % 10 == 0:
-                agent.trainer.save_model(f'models/model_11state_1hidden_noreward_{record}_{agent.n_games}.h5')
+                agent.trainer.save_model(f'model_{record}_{agent.n_games}.h5')
             mylogging.save_logs(record, score, agent.n_games, filename)
 
             print('*'*10)
@@ -116,6 +121,6 @@ def train(record=0, n_games=0, filename='logs.csv'):
 
 
 if __name__ == '__main__':
-    mylogging.save_logs(0, 0, 0, init=True, filename='logs/logs_fullstate_3hidden_noreward.csv')
+    mylogging.save_logs(0, 0, 0, init=True, filename='logs_fullstate.csv')
     # record, n_games = mylogging.load_logs(filename='logs/logs_11state_1hidden_noreward.csv')
-    train(record=0, n_games=0, filename='logs/logs_fullstate_3hidden_noreward.csv')
+    train(record=0, n_games=0, filename='logs_fullstate.csv')

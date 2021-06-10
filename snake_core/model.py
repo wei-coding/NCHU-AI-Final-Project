@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization, Activation
 import numpy as np
 
 
@@ -8,15 +8,21 @@ class QTrainer:
         self.n_state = n_state
         self.gamma = gamma
         self.model = tf.keras.Sequential()
-        self.model.add(Conv2D(8, (3, 3), activation='relu', input_shape=(32, 24, 1)))
+        self.model.add(Conv2D(8, kernel_size=(2, 2), input_shape=(32, 24, 3)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D((2, 2)))
-        self.model.add(Conv2D(32, (3, 3), activation='relu'))
+
+        self.model.add(Conv2D(16, kernel_size=(2, 2)))
+        self.model.add(BatchNormalization())
+        self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D((2, 2)))
 
         self.model.add(Flatten())
         self.model.add(Dense(512, activation='relu'))
         self.model.add(Dense(output_size, activation='linear'))
         self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='mse')
+        self.model.summary()
 
     def save_model(self, path='model.h5'):
         self.model.save_weights(path)
@@ -40,12 +46,12 @@ class QTrainer:
             Q_new = reward[idx]
             if not done[idx]:
                 state_t = np.array(next_state[idx])
-                state_t = np.reshape(state_t, (-1, 32, 24, 1))
+                state_t = np.reshape(state_t, (-1, 32, 24, 3))
                 Q_new = reward[idx] + self.gamma * np.max(self.model.predict(state_t))
 
             target[idx][np.argmax(action)] = Q_new
 
-        self.model.fit(np.reshape(state, (-1, 32, 24, 1)), target, verbose=1)
+        self.model.fit(np.reshape(state, (-1, 32, 24, 3)), target, verbose=1)
 
 
 
