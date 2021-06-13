@@ -16,7 +16,7 @@ def load_logs(filename='logs.csv'):
     return record, n_games
 
 
-def save_logs(record=0, score=0, n_games=0, filename='logs.csv', init=False):
+def save_logs(record=0, score=0, n_games=0, filename='logs.csv'):
     with open(filename, 'a', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
         writer.writerow({'record': record, 'score': score, 'n_games': n_games})

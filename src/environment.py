@@ -79,9 +79,13 @@ class SnakeGameAI:
         # game over?
         reward = 0
         game_over = False
-        if self.is_collision() or self.frame_iteration > 50 * len(self.snake):
+        if self.is_collision():
             game_over = True
             reward = -10
+            return reward, game_over, self.score
+        if self.frame_iteration > 50 * len(self.snake):
+            game_over = True
+            reward = 0
             return reward, game_over, self.score
 
         # eat food or just move?
@@ -96,11 +100,11 @@ class SnakeGameAI:
             self.snake.pop()
 
         # get close to food?
-        # if abs(self.food.x - self.head.x) <= abs(self.food.x - self.last_loc.x) and abs(self.food.y - self.head.y) <= abs(self.food.y - self.last_loc.y):
-        #     reward = 2
-        # elif abs(self.food.x - self.head.x) > abs(self.food.x - self.last_loc.x) or abs(self.food.y - self.head.y) > abs(self.food.y - self.last_loc.y):
-        #     reward = -2
-        # self.last_loc = self.head
+        if abs(self.food.x - self.head.x) <= abs(self.food.x - self.last_loc.x) and abs(self.food.y - self.head.y) <= abs(self.food.y - self.last_loc.y):
+            reward = 5
+        elif abs(self.food.x - self.head.x) > abs(self.food.x - self.last_loc.x) or abs(self.food.y - self.head.y) > abs(self.food.y - self.last_loc.y):
+            reward = -5
+        self.last_loc = self.head
 
         # update ui and clock
         self._update_ui()
