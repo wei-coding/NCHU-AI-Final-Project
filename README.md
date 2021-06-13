@@ -11,4 +11,10 @@
 
 ### 未完成：
 
-- [ ] Deep Q Learning
+- [x] Deep Q Learning
+
+
+### 各model解釋:
+
+* model1: 11狀態，一次讀3個frame，隱藏層為64, 128, 64
+* model2: 11狀態，一次讀3個frame，隱藏層為256

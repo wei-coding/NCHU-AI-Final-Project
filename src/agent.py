@@ -24,7 +24,7 @@ class Agent:
         self.states = deque(maxlen=self.frame_to_read)
         for _ in range(self.frame_to_read):
             self.states.append([0 for _ in range(self.n_state)])
-        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [64, 128, 64], 3, self.gamma)
+        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [256], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
