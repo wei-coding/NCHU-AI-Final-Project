@@ -39,7 +39,6 @@ class Agent:
         temp[1, :, :] = self.states[2, :, :]
         temp[2, :, :] = state
         self.states = temp
-        print(temp.shape)
 
         return np.transpose(temp, (1, 2, 0))
 
@@ -66,6 +65,7 @@ class Agent:
         if random.random() < self.epsilon:
             move = random.randint(0, 2)
             final_move[move] = 1
+            print('random move')
         else:
             prediction = self.trainer.model.predict(state)
             move = np.argmax(prediction)

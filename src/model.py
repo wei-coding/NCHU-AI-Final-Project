@@ -8,19 +8,12 @@ class QTrainer:
         self.n_state = n_state
         self.gamma = gamma
         self.model = tf.keras.Sequential()
-        self.model.add(Conv2D(8, kernel_size=(2, 2), input_shape=(32, 24, 3)))
-        self.model.add(BatchNormalization())
-        self.model.add(Activation('relu'))
-        self.model.add(MaxPooling2D((2, 2)))
+        
+        self.model.add(Flatten(), input_shape=(32, 24, 3))
 
-        self.model.add(Conv2D(16, kernel_size=(2, 2)))
-        self.model.add(BatchNormalization())
-        self.model.add(Activation('relu'))
-        self.model.add(MaxPooling2D((2, 2)))
 
-        self.model.add(Flatten())
-        self.model.add(Dense(512, activation='relu'))
         self.model.add(Dense(output_size, activation='linear'))
+
         self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr), loss='mse')
         self.model.summary()
 
