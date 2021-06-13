@@ -96,11 +96,11 @@ class SnakeGameAI:
             self.snake.pop()
 
         # get close to food?
-        if abs(self.food.x - self.head.x) <= abs(self.food.x - self.last_loc.x) and abs(self.food.y - self.head.y) <= abs(self.food.y - self.last_loc.y):
-            reward = 2
-        elif abs(self.food.x - self.head.x) > abs(self.food.x - self.last_loc.x) or abs(self.food.y - self.head.y) > abs(self.food.y - self.last_loc.y):
-            reward = -2
-        self.last_loc = self.head
+        # if abs(self.food.x - self.head.x) <= abs(self.food.x - self.last_loc.x) and abs(self.food.y - self.head.y) <= abs(self.food.y - self.last_loc.y):
+        #     reward = 2
+        # elif abs(self.food.x - self.head.x) > abs(self.food.x - self.last_loc.x) or abs(self.food.y - self.head.y) > abs(self.food.y - self.last_loc.y):
+        #     reward = -2
+        # self.last_loc = self.head
 
         # update ui and clock
         self._update_ui()
