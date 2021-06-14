@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, Flatten
+from tensorflow.keras.layers import Dense
 import numpy as np
 
 
@@ -9,7 +9,7 @@ class QTrainer:
         self.gamma = gamma
         self.model = tf.keras.Sequential()
         
-        self.model.add(Flatten())
+        self.model.add(Dense(input_size, activation='relu', input_shape=(n_state, )))
         for layers in hidden_size:
             self.model.add(Dense(layers, activation='relu'))
         self.model.add(Dense(output_size, activation='linear'))
@@ -34,14 +34,14 @@ class QTrainer:
 
         # Q_new = r + y * max(next_predicted Q value)
         target = np.copy(pred)
+        print(target)
         for idx in range(done.shape[0]):
             Q_new = reward[idx]
             if not done[idx]:
                 state_t = np.array(next_state[idx])
-                state_t = np.reshape(state_t, (-1, self.n_state))
                 Q_new = reward[idx] + self.gamma * np.max(self.model.predict(state_t))
 
-            target[idx][np.argmax(action)] = Q_new
+            target[idx, 0, np.argmax(action)] = Q_new
 
         self.model.fit(np.reshape(state, (-1, self.n_state)), target, verbose=1)
 

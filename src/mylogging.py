@@ -1,9 +1,5 @@
 import csv
-
-def init_logs(filename='logs.csv'):
-    with open(filename, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
-        writer.writeheader()
+import os
 
 def load_logs(filename='logs.csv'):
     record = 0
@@ -17,6 +13,12 @@ def load_logs(filename='logs.csv'):
 
 
 def save_logs(record=0, score=0, n_games=0, filename='logs.csv'):
-    with open(filename, 'a', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
-        writer.writerow({'record': record, 'score': score, 'n_games': n_games})
+    if os.path.exists(filename):
+        with open(filename, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
+            writer.writerow({'record': record, 'score': score, 'n_games': n_games})
+    else:
+        with open(filename, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['n_games', 'score', 'record'])
+            writer.writeheader()
+            writer.writerow({'record': record, 'score': score, 'n_games': n_games})

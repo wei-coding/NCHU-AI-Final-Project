@@ -17,14 +17,14 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.n_state = 11
-        self.frame_to_read = 3
+        self.frame_to_read = 1
         self.epsilon = 0.4
         self.gamma = 0.8
         self.memory = deque(maxlen=MAX_MEM)
         self.states = deque(maxlen=self.frame_to_read)
         for _ in range(self.frame_to_read):
             self.states.append([0 for _ in range(self.n_state)])
-        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [256], 3, self.gamma)
+        self.trainer = QTrainer(self.n_state * self.frame_to_read, LR, self.n_state * self.frame_to_read, [64, 128, 64], 3, self.gamma)
 
     def get_state(self, game):
         head = game.snake[0]
@@ -72,7 +72,7 @@ class Agent:
 
         self.states.append(state)
 
-        return np.array(list(self.states), dtype=np.uint8)
+        return np.array(list(self.states), dtype=np.uint8).reshape((-1, self.n_state * self.frame_to_read))
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -92,8 +92,6 @@ class Agent:
 
     def get_action(self, state):
         # random move
-        state = np.array(state)
-        state = np.reshape(state, (-1, self.n_state * self.frame_to_read))
         final_move = [0, 0, 0]
         if random.random() < self.epsilon:
             print('random behavior')
@@ -107,14 +105,14 @@ class Agent:
         return final_move
 
 
-def train(record=0, n_games=0, model_name='model.h5', log_name='log.csv'):
+def train(record=0, model_name='model.h5', log_name='log.csv'):
     tot_score = 0
     print(tf.test.is_gpu_available())
     agent = Agent()
     game = SnakeGameAI()
-    # agent.trainer.load_model('model_11state_2hidden_530.h5')
-    if os.path.exists(os.path.join('models', model_name)):
-        agent.trainer.load_model(os.path.join('models', model_name))
+    if os.path.exists(model_name):
+        print('*'*10 + '\nload model...\n' + '*'*10)
+        agent.trainer.load_model(model_name)
         agent.epsilon = 0.01
     while True:
         # get old state
@@ -155,6 +153,5 @@ def train(record=0, n_games=0, model_name='model.h5', log_name='log.csv'):
 
 
 if __name__ == '__main__':
-    filename = 'model2'
-    init_logs(f'logs/{filename}.csv')
+    filename = 'model1'
     train(model_name=f'models/{filename}.h5', log_name=f'logs/{filename}.csv')
