@@ -34,7 +34,6 @@ class QTrainer:
 
         # Q_new = r + y * max(next_predicted Q value)
         target = np.copy(pred)
-        print(target)
         for idx in range(done.shape[0]):
             Q_new = reward[idx]
             if not done[idx]:

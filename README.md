@@ -18,3 +18,6 @@
 
 * model1: 11狀態，一次讀3個frame，隱藏層為64, 128, 64
 * model2: 11狀態，一次讀3個frame，隱藏層為256
+* model3: 11狀態，一次讀3個frame，隱藏層為512
+* model4: 11狀態，一次讀3個frame，隱藏層為512，activation改為softmax
+* model5: 14狀態(原本11 + 上左右的身體距離倒數)，一次個frame，隱藏層[128, 128]
